@@ -43,6 +43,9 @@
                         <li class="nav-item">
                             <a class="nav-link" aria-current="page" href="https://www.youtube.com/watch?v=ll5UUjwZlWw" id="video_tutorial_link" target="_blank">Video Tutorial</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" aria-current="page" href="https://github.com/j1r2d/byu-pulse-survey-generator/" id="source_link" target="_blank">Source on GitHub</a>
+                        </li>
                     </ul>
                 </div>
             </nav>
