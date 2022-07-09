@@ -206,41 +206,136 @@
                 $('#submit').click(function(e) {
                     $("#display-error-form").css("display","hidden");
                     e.preventDefault();
-                    var course_name = $("#course_name").val();
-                    var drill_down_items = $("#drill_down_items").val();
-                    <?php
-                    $num = 1;
-                    while($num <= 5) {
-                        echo 'var link_'.$num.'_title = $("#link_'.$num.'_title").val();';
-                        echo "\n";
-                        echo 'var link_'.$num.'_url = $("#link_'.$num.'_url").val();';
-                        echo "\n";
-                        echo 'var link_'.$num.'_type = $("#link_'.$num.'_type").val();';
-                        echo "\n";
-                        echo 'var link_'.$num.'_icon = $("#link_'.$num.'_icon").val();';
-                        echo "\n";
-                        $num++;
-                    }
-                    ?>
-                    $.ajax({
-                        type: "POST",
-                        url: "form.php",
-                        dataType: "json",
-                        data: {course_name:course_name, drill_down_items:drill_down_items, <?php $num = 1; while($num <= 5) { if ($num == 5) { $comma = ""; } else { $comma = ", "; } echo 'link_'.$num.'_title:link_'.$num.'_title, link_'.$num.'_url:link_'.$num.'_url, link_'.$num.'_type:link_'.$num.'_type, link_'.$num.'_icon:link_'.$num.'_icon'.$comma; $num++; } ?>},
-                        success: function(data) {
-                            if (data.code == "200") {
-                                $("html, body").animate({ scrollTop: $(document).height() }, 100);
-                                $("#output").val(data.msg);
-                                $('#code_instructions').fadeIn('slow').delay(20000).hide(0);
-                            }
-                            else {
-                                $("#display-error-form").css("display","block");
-                                $("#display-error-form").html('<i class="far fa-exclamation-triangle"></i>&nbsp;'+data.msg);
-                                window.scrollTo(0,0);
-                                $('#display-error-form').fadeIn('slow').delay(20000).hide(0);
+                    const regexCourse = new RegExp("[^a-zA-Z0-9]+");
+                    const regexEmail = new RegExp("^[a-z0-9]+(\.[_a-z0-9]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,15})$", "i")
+                    const regexUrl = new RegExp("^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:[/?#]\S*)?$")
+                    let code = '';
+                    let errorMsg = '';
+                    let ddArray = new Array();
+                    
+                    let course_name = $("#course_name").val();
+                    let drill_down_items = $("#drill_down_items").val();
+                    let link_1_title = $('#link_1_title').val();
+                    let link_1_url = $('#link_1_url').val();
+                    let num = 1;
+                    while (num <= 5) {
+                        let link_title = $(`#link_${num}_title`).val();
+                        let link_url = $(`#link_${num}_url`).val();
+                        let link_type = $(`#link_${num}_type`).val();
+                        let link_icon = $(`#link_${num}_icon`).val();
+
+                        let lengthTitle = link_title.length;
+                        let lengthUrl = link_url.length;
+                        let lengthType = link_type.length;
+                        let lengthIcon = link_icon.length;
+                        if(num === 1){
+                            if(lengthTitle === 0 || lengthUrl === 0 || link_type == 'Select...' || link_icon == 'Select...'){
+                                errorMsg = `Please enter a title for Link ${num}`;
                             }
                         }
-                    });
+                        
+                        if(lengthTitle > 0){
+                            if (link_type == "Select..." || link_icon == "Select...") {
+                                errorMsg = `Please ensure all of the fields for Link ${num} are filled out.`;
+                            }else if(link_url.substr(0,7) === 'mailto:' && regexEmail.test(link_url.substr(7)) !== true){
+                                errorMsg = `Please enter a valid email address for Link ${num}`; 
+                            }else if(regexUrl.test(link_url) !== true){
+                                errorMsg = `Please enter a valid URL for Link`;
+                            }
+                        }
+                        num++;
+                    }
+                   
+                    //validation link title and url
+                    if(link_1_title.length > 0 && link_1_url.length === 0){
+                        errorMsg = "Please include at least one link."
+                    }
+                    if(link_1_title.length === 0 && link_1_url.length === 0){
+                        errorMsg = "Please give Link 1 a title."
+                    }
+                     // validation drill down items
+                    if(drill_down_items.length > 0){
+                        ddArray = drill_down_items.split(/\r?\n/);
+                    }else{
+                        errorMsg = 'Please enter the Drill down items';
+                    }
+                    // validation course name 
+                    if(course_name.length === 0){
+                        errorMsg = 'Please enter the course name';
+                    }
+                    course_name = course_name.replace(" ","");
+                    
+                    if(regexCourse.test(course_name) === true){
+                       errorMsg = 'The course name should only contain numbers, letters, and spaces.';
+                    }else{
+                        course_name = '--' + course_name.toLowerCase().replace(" ","");
+                    }
+                    if(errorMsg.length === 0 ){
+                        let code;
+                        code = "<!-- BEGIN BYU PULSE SURVEY -->";
+                        code += "\n<div style=\"background-color:white;\">";
+                        code += "\n<ul class=\"dce-pulse "+course_name+"\" data-apvr=\"1.2\">";
+                        if(ddArray.length > 0){
+                            ddArray.forEach(el => {
+                                if(el.length > 1){
+                                    code += `<li>${decodeURI(el.replace("+"," "))}</li>`;
+                                }
+                                
+                            })
+                        }
+                        let num = 1;
+                        while (num <= 5) {
+                            let link_title = $(`#link_${num}_title`).val();
+                            let link_url = $(`#link_${num}_url`).val();
+                            let link_type = $(`#link_${num}_type`).val();
+                            let link_icon = $(`#link_${num}_icon`).val();
+
+                            let lengthTitle = link_title.length;
+                            let lengthUrl = link_url.length;
+                            let lengthType = link_type.length;
+                            let lengthIcon = link_icon.length;
+                            let icon = '';
+                            if(lengthTitle !== 0){
+                                if(lengthIcon !== 0 && link_icon != "Select..." ){
+                                    icon = `<i class="fas fa-${link_icon}"></i>`;
+                                }else{
+                                    icon = '';
+                                }
+                                code += `\n <li class="${link_type}"><a href="${link_url}" target="_blank">${icon}${link_title}</a></li>`
+                            }
+                            num++;
+                        }
+                        code += "\n</ul>";
+                        code += "\n</div>";
+                        code += "\n<!-- END BYU PULSE SURVEY -->";
+                        
+                        $("html, body").animate({ scrollTop: $(document).height() }, 100);
+                        $("#output").val(code);
+                        $('#code_instructions').fadeIn('slow').delay(20000).hide(0);
+                    }else{
+                        $("#display-error-form").css("display","block");
+                        $("#display-error-form").html('<i class="far fa-exclamation-triangle"></i>&nbsp;'+errorMsg);
+                        window.scrollTo(0,0);
+                        $('#display-error-form').fadeIn('slow').delay(20000).hide(0);
+                    }
+                    // $.ajax({
+                    //     type: "POST",
+                    //     url: "form.php",
+                    //     dataType: "json",
+                    //     data: {course_name:course_name, drill_down_items:drill_down_items, <?php $num = 1; while($num <= 5) { if ($num == 5) { $comma = ""; } else { $comma = ", "; } echo 'link_'.$num.'_title:link_'.$num.'_title, link_'.$num.'_url:link_'.$num.'_url, link_'.$num.'_type:link_'.$num.'_type, link_'.$num.'_icon:link_'.$num.'_icon'.$comma; $num++; } ?>},
+                    //     success: function(data) {
+                    //         if (data.code == "200") {
+                                
+                    
+                    //         }
+                    //         else {
+                    //             $("#display-error-form").css("display","block");
+                    //             $("#display-error-form").html('<i class="far fa-exclamation-triangle"></i>&nbsp;'+data.msg);
+                    //             window.scrollTo(0,0);
+                    //             $('#display-error-form').fadeIn('slow').delay(20000).hide(0);
+                    //         }
+                    //     }
+                    // });
                 });
             });
             $(document).ready(function() {
